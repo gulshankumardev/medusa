@@ -6,9 +6,9 @@ import {
   PropertyType,
   RelationshipType,
 } from "@medusajs/types"
+import { isObject, isString, toCamelCase } from "../common"
 import { DMLSchema } from "./entity-builder"
 import { BelongsTo } from "./relations/belongs-to"
-import { isObject, isString, toCamelCase } from "../common"
 
 type Config = string | { name?: string; tableName: string }
 

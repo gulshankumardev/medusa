@@ -1,12 +1,13 @@
 import { moduleProviderLoader } from "@medusajs/modules-sdk"
-import { LoaderOptions, ModuleProvider, ModulesSdkTypes } from "@medusajs/types"
 import {
-  ContainerRegistrationKeys,
-  lowerCaseFirst,
-  promiseAll,
-} from "@medusajs/utils"
+  DAL,
+  InferEntityType,
+  LoaderOptions,
+  ModuleProvider,
+  ModulesSdkTypes,
+} from "@medusajs/types"
+import { ContainerRegistrationKeys, promiseAll } from "@medusajs/utils"
 import { NotificationProvider } from "@models"
-import { NotificationProviderService } from "@services"
 import {
   NotificationIdentifiersRegistrationName,
   NotificationProviderRegistrationPrefix,
@@ -59,11 +60,9 @@ async function syncDatabaseProviders({
   container: any
   providers: ModuleProvider[]
 }) {
-  const providerServiceRegistrationKey = lowerCaseFirst(
-    NotificationProviderService.name
-  )
-  const providerService: ModulesSdkTypes.IMedusaInternalService<NotificationProvider> =
-    container.resolve(providerServiceRegistrationKey)
+  const providerService: DAL.RepositoryService<
+    InferEntityType<typeof NotificationProvider>
+  > = container.resolve("notificationProviderRepository")
 
   const logger = container.resolve(ContainerRegistrationKeys.LOGGER) ?? console
   const normalizedProviders = providers.map((provider) => {
@@ -89,7 +88,7 @@ async function syncDatabaseProviders({
   validateProviders(normalizedProviders)
 
   try {
-    const providersInDb = await providerService.list({})
+    const providersInDb = await providerService.find()
     const providersToDisable = providersInDb.filter(
       (dbProvider) =>
         !normalizedProviders.some(
@@ -106,7 +105,10 @@ async function syncDatabaseProviders({
     if (providersToDisable.length) {
       promises.push(
         providerService.update(
-          providersToDisable.map((p) => ({ id: p.id, is_enabled: false }))
+          providersToDisable.map((p) => ({
+            entity: p,
+            update: { is_enabled: false },
+          }))
         )
       )
     }
